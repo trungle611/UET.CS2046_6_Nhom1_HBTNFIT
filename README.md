@@ -42,7 +42,6 @@ frontend/
   src/constants.js  nhãn bữa ăn và dinh dưỡng
   src/style.css     giao diện nền
 data/               dữ liệu CSV sẽ bổ sung theo task
-docs/               phân công và quy trình làm việc
 ```
 
 ## Kiểm tra
@@ -58,8 +57,3 @@ npm run format:check
 npm run build
 ```
 
-## Làm việc nhóm
-
-Đọc [CONTRIBUTING.md](CONTRIBUTING.md) và [phân công](docs/TEAM_TASKS.md). Tạo branch từ `develop`, mở PR vào `develop`, review trước khi merge. `main` giữ bản ổn định.
-
-Commit khởi tạo khung: `Tao khung cho du an`. Các commit tiếp theo phản ánh công việc thực tế của từng thành viên, không chỉnh tác giả/ngày commit để mô phỏng tiến độ trước đây.
