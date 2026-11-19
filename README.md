@@ -1,6 +1,6 @@
 # UET.CS2046_6_Nhom1_HBTNFIT
 
-Khung dự án HBTNFIT của Nhóm 1. Stack: React + Vite, FastAPI và SQLAlchemy/SQLite dự kiến. Bản này mới có điều hướng giao diện và `/api/health`; chưa triển khai tài khoản, database, nhận diện AI, thực đơn hay tập luyện.
+HBTNFIT của Nhóm 1 dùng React + Vite, FastAPI và SQLAlchemy/SQLite. Bản hiện tại có khung điều hướng, `/api/health`, các model/schema và nạp danh mục thực phẩm từ CSV khi khởi động. Các route nghiệp vụ và giao diện chức năng đang được tích hợp.
 
 ## Chạy local
 
@@ -24,16 +24,19 @@ npm run dev
 
 Mở http://127.0.0.1:5173 và bấm **Kiểm tra kết nối API**. Swagger: http://127.0.0.1:8000/docs. Nếu bản demo cũ đang dùng cổng 8000/5173 trên cùng máy, hãy dừng nó trước khi chạy bản khung.
 
-`.env.example` chỉ là mẫu cho các task sau; bản khung chưa gọi Gemini hoặc mở database và không cần API key để chạy.
+Backend tạo database SQLite local theo `DATABASE_URL` và nạp danh mục CSV khi khởi động. Chưa cần API key để chạy health check; không commit file `.env` hoặc database.
 
 ## Cấu trúc
 
 ```text
 backend/
   app/main.py       API khởi động và health check
-  app/db.py         chỗ bổ sung session/database
-  app/models.py     chỗ bổ sung model
-  app/schemas.py    chỗ bổ sung schema
+  app/db.py         kết nối, session và cập nhật database demo
+  app/models.py     model SQLAlchemy
+  app/schemas.py    schema kiểm tra dữ liệu
+  app/catalog.py    nạp và kiểm tra danh mục CSV
+  app/core.py       tính dinh dưỡng và đối chiếu thực phẩm
+  app/auth.py       helper mật khẩu và token
   app/ai.py         chỗ tích hợp Gemini
   tests/            kiểm thử API
 frontend/
@@ -41,7 +44,7 @@ frontend/
   src/api.js        hàm gọi API chung
   src/constants.js  nhãn bữa ăn và dinh dưỡng
   src/style.css     giao diện nền
-data/               dữ liệu CSV sẽ bổ sung theo task
+data/               danh mục thực phẩm và món ăn CSV
 ```
 
 ## Kiểm tra
