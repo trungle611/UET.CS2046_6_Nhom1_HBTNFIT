@@ -1,6 +1,6 @@
 # UET.CS2046_6_Nhom1_HBTNFIT
 
-HBTNFIT của Nhóm 1 dùng React + Vite, FastAPI và SQLAlchemy/SQLite. Bản hiện tại có khung điều hướng, `/api/health`, các model/schema và nạp danh mục thực phẩm từ CSV khi khởi động. Các route nghiệp vụ và giao diện chức năng đang được tích hợp.
+HBTNFIT của Nhóm 1 dùng React + Vite, FastAPI và SQLAlchemy/SQLite. Bản hiện tại có khung điều hướng, `/api/health`, các model/schema và nạp danh mục thực phẩm từ CSV khi khởi động. Module nhận diện Gemini và xử lý ảnh đã có; route `/api/scan` và các route nghiệp vụ khác đang được tích hợp.
 
 ## Chạy local
 
@@ -37,7 +37,8 @@ backend/
   app/catalog.py    nạp và kiểm tra danh mục CSV
   app/core.py       tính dinh dưỡng và đối chiếu thực phẩm
   app/auth.py       helper mật khẩu và token
-  app/ai.py         chỗ tích hợp Gemini
+  app/ai.py         Gemini, fallback và xử lý lỗi/timeout
+  app/scan_service.py kiểm tra ảnh, đối chiếu món và dinh dưỡng
   tests/            kiểm thử API
 frontend/
   src/App.jsx       bố cục và điều hướng
