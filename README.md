@@ -44,9 +44,15 @@ frontend/
   src/App.jsx       bố cục và điều hướng
   src/api.js        hàm gọi API chung
   src/constants.js  nhãn bữa ăn và dinh dưỡng
+  src/ScanSection.jsx tải ảnh và kiểm tra kết quả nhận diện
+  src/TodayMeals.jsx thực đơn, khẩu phần và checklist
+  src/ScanHistory.jsx lịch sử nhận diện
+  src/FoodHistory.jsx lịch sử dinh dưỡng theo ngày
   src/style.css     giao diện nền
 data/               danh mục thực phẩm và món ăn CSV
 ```
+
+Bốn component ăn uống đã có mã nguồn, nhưng chưa được nối vào `App.jsx`, stylesheet và API nghiệp vụ. Chạy frontend hiện vẫn hiển thị khung điều hướng; luồng ăn uống chưa chạy end-to-end trong bản tích hợp này.
 
 ## Kiểm tra
 
