@@ -62,9 +62,7 @@ export default function ScanHistory({ call, refreshKey, onError }) {
         </div>
         {loading && <LoaderCircle className="spin" size={19} />}
       </div>
-      <p className="panel-lead">
-        Xem lại ảnh, món AI đã gợi ý và trạng thái xác nhận của riêng tài khoản này.
-      </p>
+      <p className="panel-lead">Xem lại ảnh và món đã xác nhận trong phiên sử dụng của bạn.</p>
       {!loading && items.length === 0 && (
         <div className="history-empty">
           <ImageOff size={24} />
@@ -82,12 +80,15 @@ export default function ScanHistory({ call, refreshKey, onError }) {
                     day: '2-digit',
                     month: '2-digit',
                     year: 'numeric',
+                    timeZone: 'Asia/Ho_Chi_Minh',
                   }).format(new Date(item.created_at))}
                 </strong>
                 <span>
-                  {new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(
-                    new Date(item.created_at),
-                  )}
+                  {new Intl.DateTimeFormat('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                  }).format(new Date(item.created_at))}
                 </span>
               </div>
               <div className="history-body">
@@ -165,6 +166,7 @@ export default function ScanHistory({ call, refreshKey, onError }) {
               {new Intl.DateTimeFormat('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
+                timeZone: 'Asia/Ho_Chi_Minh',
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
