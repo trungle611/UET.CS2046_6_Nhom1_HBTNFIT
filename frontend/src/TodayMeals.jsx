@@ -169,9 +169,11 @@ export default function TodayMeals({
                 {completedChecklist}/{checklist.length} món của ba bữa đã dùng
               </span>
             </div>
-            <button className="link-button" onClick={onOpenProfile}>
-              Đổi phương án
-            </button>
+            {onOpenProfile && (
+              <button className="link-button" onClick={onOpenProfile}>
+                Đổi phương án
+              </button>
+            )}
           </div>
           <div className="food-checklist-items">
             {visibleChecklist.length ? (
@@ -222,9 +224,11 @@ export default function TodayMeals({
         <div className="daily-goal">
           <div className="daily-goal-top">
             <strong>Mục tiêu theo cân nặng của bạn</strong>
-            <button className="link-button" onClick={onOpenProfile}>
-              Sửa mục tiêu
-            </button>
+            {onOpenProfile && (
+              <button className="link-button" onClick={onOpenProfile}>
+                Sửa mục tiêu
+              </button>
+            )}
           </div>
           {goalRows.map(([label, totalKey, targetKey, unit]) => (
             <div className="goal-progress" key={targetKey}>
@@ -260,9 +264,11 @@ export default function TodayMeals({
       ) : (
         <div className="daily-goal daily-goal-empty">
           <span>Chưa có mục tiêu kcal và protein mỗi ngày.</span>
-          <button className="link-button" onClick={onOpenProfile}>
-            Thiết lập trong Cá nhân →
-          </button>
+          {onOpenProfile && (
+            <button className="link-button" onClick={onOpenProfile}>
+              Thiết lập trong Cá nhân →
+            </button>
+          )}
         </div>
       )}
       {target?.macro_distribution_warning && (
