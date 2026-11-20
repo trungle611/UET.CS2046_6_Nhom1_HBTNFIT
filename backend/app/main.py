@@ -1,9 +1,23 @@
-"""Điểm khởi động API. Các route nghiệp vụ sẽ được bổ sung theo task."""
+"""Khởi động database, danh mục CSV và API kiểm tra kết nối."""
+
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="HBTNFIT API", version="0.1.0")
+from .catalog import load_catalog
+from .db import Base, engine, migrate_demo_columns
+
+
+@asynccontextmanager
+async def lifespan(app):
+    Base.metadata.create_all(engine)
+    migrate_demo_columns()
+    load_catalog()
+    yield
+
+
+app = FastAPI(title="HBTNFIT API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
