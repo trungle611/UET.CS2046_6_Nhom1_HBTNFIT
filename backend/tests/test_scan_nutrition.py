@@ -11,6 +11,9 @@ from app.scan_service import build_dishes
         {"kcal": 1.85, "protein": float("inf"), "carb": 0.05, "fat": 0.12},
         {"kcal": float("nan"), "protein": 0.15, "carb": 0.05, "fat": 0.12},
         {"kcal": 0, "protein": 0, "carb": 0, "fat": 0},
+        {"kcal": True, "protein": 0.15, "carb": 0.05, "fat": 0.12},
+        {"kcal": 1.85, "protein": "0.15", "carb": 0.05, "fat": 0.12},
+        {"kcal": 10**400, "protein": 0.15, "carb": 0.05, "fat": 0.12},
     ],
 )
 def test_invalid_per_gram_estimate_is_not_used(values):

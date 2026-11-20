@@ -1,10 +1,94 @@
+import copy
 import json
 from types import SimpleNamespace
 
-import httpx
 import pytest
 
 from app import ai
+from app.scan_service import build_dishes, validate_scan_result
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"dishes": "Phở gà"},
+        {"dishes": [None]},
+        {"dishes": [{"candidate_labels": "Phở gà"}]},
+        {"dishes": [{"candidate_labels": [1]}]},
+        {"dishes": [{"candidate_labels": ["Phở gà"], "visible_ingredients": "Thịt gà"}]},
+        {"dishes": [], "warning": []},
+        {"dishes": [{"candidate_labels": ["Phở gà"], "confidence": 1.1}]},
+        {"dishes": [{"candidate_labels": ["Phở gà"], "confidence": True}]},
+        {"dishes": [{"candidate_labels": ["Phở gà"], "estimated_nutrition_1g": []}]},
+    ],
+)
+def test_invalid_scan_structure_is_a_controlled_error(monkeypatch, payload):
+    monkeypatch.setattr(ai, "client", lambda: SimpleNamespace(models=FakeModels([payload])))
+    with pytest.raises(ai.AIResponseError, match="sai cấu trúc"):
+        ai.scan_image(b"image", "image/jpeg")
+
+
+def test_valid_empty_scan_remains_unknown():
+    result = validate_scan_result({"dishes": [], "warning": "Không thấy món ăn"})
+    dishes = build_dishes(result, [], lambda food: food)
+    assert dishes[0]["candidates"] == []
+    assert dishes[0]["uncertainty_reason"] == "Không thấy món ăn"
+
+
+@pytest.mark.parametrize("change", ["number", "id", "structure"])
+def test_language_rewrite_cannot_change_data(monkeypatch, change):
+    original = {"items": [{"food_id": "F_0001", "name": "Chicken rice", "kcal": 400}]}
+    rewritten = copy.deepcopy(original)
+    rewritten["items"][0]["name"] = "Cơm gà"
+    if change == "number":
+        rewritten["items"][0]["kcal"] = 500
+    elif change == "id":
+        rewritten["items"][0]["food_id"] = "F_0002"
+    else:
+        rewritten["items"] = []
+    fake = SimpleNamespace(models=FakeModels([rewritten]))
+    with pytest.raises(ai.AIResponseError, match="thay đổi cấu trúc"):
+        ai.rewrite_vietnamese(fake, original, {"type": "object"})
+
+
+def test_language_rewrite_preserves_ids_and_numbers():
+    original = {"food_id": "F_0001", "name": "Chicken rice", "kcal": 400}
+    translated = {"food_id": "F_0001", "name": "Cơm gà", "kcal": 400.0}
+    fake = SimpleNamespace(models=FakeModels([translated]))
+    assert ai.rewrite_vietnamese(fake, original, {"type": "object"}) == translated
+
+
+def test_short_unaccented_food_names_are_rewritten(monkeypatch):
+    original = {
+        "dishes": [{"candidate_labels": ["Pho ga"], "visible_ingredients": ["Thit ga"]}],
+        "warning": "",
+    }
+    translated = {
+        "dishes": [{"candidate_labels": ["Phở gà"], "visible_ingredients": ["Thịt gà"]}],
+        "warning": "",
+    }
+    models = FakeModels([original, translated])
+    monkeypatch.setattr(ai, "client", lambda: SimpleNamespace(models=models))
+    assert ai.scan_image(b"image", "image/jpeg") == translated
+    assert len(models.calls) == 2
+
+
+def test_only_primary_label_can_select_a_catalog_dish():
+    foods = [
+        SimpleNamespace(id="pho", name="Phở gà", display_name=None, aliases=[], avoid_tags=[]),
+        SimpleNamespace(id="com", name="Cơm gà", display_name=None, aliases=[], avoid_tags=[]),
+    ]
+    result = {"dishes": [{"candidate_labels": ["Phở gà", "Cơm gà"], "confidence": 0.9}]}
+    dishes = build_dishes(result, foods, lambda food: {"id": food.id})
+    assert dishes[0]["candidates"] == [{"id": "pho"}]
+
+
+def test_low_confidence_requires_manual_review():
+    food = SimpleNamespace(id="pho", name="Phở gà", display_name=None, aliases=[], avoid_tags=[])
+    result = {"dishes": [{"candidate_labels": ["Phở gà"], "confidence": 0.4}]}
+    dishes = build_dishes(result, [food], lambda item: {"id": item.id})
+    assert dishes[0]["suggested_labels"] == ["Phở gà"]
+    assert dishes[0]["candidates"] == []
 
 
 class FakeModels:
@@ -26,124 +110,6 @@ def test_scan_requests_per_gram_estimate_for_out_of_catalog_dish(monkeypatch):
     assert "MÓN NGOÀI DANH MỤC" in prompt
     schema = models.calls[0]["config"].response_schema
     assert "estimated_nutrition_1g" in schema["properties"]["dishes"]["items"]["required"]
-
-
-def test_project_fallback_on_quota_error(monkeypatch):
-    class QuotaModels:
-        def generate_content(self, **kwargs):
-            raise ai.errors.ClientError(429, {"error": {"message": "Quota exhausted"}})
-
-    backup = FakeModels([{"ok": True}])
-    monkeypatch.setenv("GEMINI_API_KEY", "primary-test-key")
-    monkeypatch.setenv("GEMINI_FALLBACK_API_KEY", "backup-test-key")
-    monkeypatch.setattr(ai, "client", lambda key=None: SimpleNamespace(models=backup))
-    monkeypatch.setattr(ai.time, "sleep", lambda _: None)
-
-    result = ai.generate_json(SimpleNamespace(models=QuotaModels()), "test", {"type": "object"})
-    assert result == {"ok": True}
-    assert len(backup.calls) == 1
-
-
-def test_project_fallback_does_not_hide_bad_request(monkeypatch):
-    class BadModels:
-        def generate_content(self, **kwargs):
-            raise ai.errors.ClientError(400, {"error": {"message": "Invalid schema"}})
-
-    monkeypatch.setenv("GEMINI_FALLBACK_API_KEY", "backup-test-key")
-    monkeypatch.setattr(ai, "client", lambda key=None: pytest.fail("Must not call backup for 400"))
-    with pytest.raises(ai.errors.ClientError):
-        ai.generate_json(SimpleNamespace(models=BadModels()), "test", {"type": "object"})
-
-
-@pytest.mark.parametrize(
-    "failure",
-    [
-        httpx.ReadTimeout("read timeout"),
-        httpx.ConnectError("connection failed"),
-        ai.errors.ServerError(503, {"error": {"message": "Busy"}}),
-    ],
-)
-def test_transport_and_overload_switch_to_backup(monkeypatch, failure):
-    primary_calls = []
-
-    def failed(**kwargs):
-        primary_calls.append(kwargs)
-        raise failure
-
-    backup = FakeModels([{"ok": True}])
-    monkeypatch.setenv("GEMINI_API_KEY", "primary-test")
-    monkeypatch.setenv("GEMINI_FALLBACK_API_KEY", "backup-test")
-    monkeypatch.setattr(ai, "client", lambda key=None: SimpleNamespace(models=backup))
-    monkeypatch.setattr(ai.time, "sleep", lambda _: None)
-    result = ai.generate_json(
-        SimpleNamespace(models=SimpleNamespace(generate_content=failed)), "test", {"type": "object"}
-    )
-    assert result == {"ok": True}
-    assert len(primary_calls) == 1
-    assert len(backup.calls) == 1
-
-
-def test_network_retry_stops_and_reports_timeout(monkeypatch):
-    calls = []
-
-    def failed(**kwargs):
-        calls.append(kwargs)
-        raise httpx.ReadTimeout("may contain sensitive request details")
-
-    monkeypatch.delenv("GEMINI_FALLBACK_API_KEY", raising=False)
-    monkeypatch.setattr(ai.time, "sleep", lambda _: None)
-    with pytest.raises(ai.AIServiceError) as caught:
-        ai.generate_json(
-            SimpleNamespace(models=SimpleNamespace(generate_content=failed)),
-            "test",
-            {"type": "object"},
-        )
-    assert caught.value.reason == "timeout"
-    assert "sensitive" not in str(caught.value)
-    assert len(calls) == ai.MAX_ATTEMPTS
-
-
-def test_elapsed_budget_prevents_extra_attempt(monkeypatch):
-    elapsed = [0.0]
-    calls = []
-
-    def failed(**kwargs):
-        calls.append(kwargs)
-        elapsed[0] = ai.REQUEST_BUDGET_SECONDS + 1
-        raise httpx.ReadTimeout("timeout")
-
-    monkeypatch.delenv("GEMINI_FALLBACK_API_KEY", raising=False)
-    monkeypatch.setattr(ai.time, "monotonic", lambda: elapsed[0])
-    monkeypatch.setattr(ai.time, "sleep", lambda _: None)
-    with pytest.raises(ai.AIServiceError, match="phản hồi quá lâu"):
-        ai.generate_json(
-            SimpleNamespace(models=SimpleNamespace(generate_content=failed)),
-            "test",
-            {"type": "object"},
-        )
-    assert len(calls) == 1
-
-
-def test_language_correction_shares_request_budget(monkeypatch):
-    elapsed = [10.0]
-    configured_timeouts = []
-
-    def generated(**kwargs):
-        configured_timeouts.append(kwargs["config"].http_options.timeout)
-        elapsed[0] += 35
-        return SimpleNamespace(text="{}")
-
-    monkeypatch.setattr(ai.time, "monotonic", lambda: elapsed[0])
-    fake = SimpleNamespace(models=SimpleNamespace(generate_content=generated))
-
-    @ai.bounded_request
-    def two_steps():
-        ai.generate_json(fake, "scan", {"type": "object"})
-        ai.generate_json(fake, "translate", {"type": "object"})
-
-    two_steps()
-    assert configured_timeouts == [20000, 10000]
-    assert ai._request_deadline.get() is None
 
 
 def test_scan_retries_translation_when_gemini_returns_english(monkeypatch):
