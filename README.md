@@ -6,6 +6,8 @@ Xem [hướng dẫn Windows, macOS, tunnel và cấu hình frontend Vercel/backe
 
 Backend nạp hai danh mục CSV trong `data/` khi khởi động. Xem [mô tả cấu trúc, đơn vị và nguồn dữ liệu](data/README.md).
 
+Xem [bản ứng viên nộp bài và quy trình tổng duyệt](RELEASE.md). Chạy toàn bộ kiểm tra bằng `python scripts/check_release.py` trong môi trường đã cài đủ thư viện.
+
 ## Chạy local
 
 Yêu cầu Python 3.11+, Node.js 22 và Git. Chạy các lệnh sau từ thư mục gốc repo:
