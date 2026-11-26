@@ -55,6 +55,10 @@ class CustomFoodIn(RequestModel):
     fat_100g: float = Field(default=0, ge=0, le=100)
 
 
+class NutritionEstimateIn(RequestModel):
+    name: str = Field(min_length=2, max_length=160)
+
+
 class LogIn(RequestModel):
     food_id: str | None = None
     custom_food: CustomFoodIn | None = None

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 const statusText = { not_started: 'Chưa bắt đầu', started: 'Đang tập', completed: 'Hoàn thành' };
-const attendanceText = { attended: 'Có đi tập', missed: 'Nghỉ', completed: 'Hoàn thành' };
+const attendanceText = { attended: 'Có đi tập', missed: 'Bỏ lỡ', completed: 'Hoàn thành' };
 const weekdays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 function monthKey(date) {
@@ -133,7 +133,7 @@ export default function WorkoutPanel({ workouts, call, refresh, onError }) {
               disabled={busyId === 'attendance' || attendance === 'missed'}
               onClick={() => checkIn('missed')}
             >
-              Nghỉ hôm nay
+              Bỏ lỡ hôm nay
             </button>
           </div>
         )}

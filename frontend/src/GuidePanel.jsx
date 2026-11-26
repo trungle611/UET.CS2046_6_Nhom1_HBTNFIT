@@ -20,7 +20,7 @@ const steps = [
       'Nhập tuổi, chiều cao và cân nặng hiện tại.',
       'Chọn cân nặng mong muốn và ngày muốn hoàn thành.',
       'Chọn mục tiêu, giới tính, mức vận động và mức protein.',
-      'Nhấn “Lưu mục tiêu” hoặc “Lưu và xem ăn uống”.',
+      'Nhấn “Lưu và tính mục tiêu”.',
     ],
   },
   {
@@ -32,7 +32,7 @@ const steps = [
     items: [
       'Xem kcal, protein, carb và chất béo cần theo dõi.',
       'Nếu thời hạn quá gấp, hệ thống sẽ hiển thị cảnh báo.',
-      'Có thể dùng “Lưu và nhận gợi ý AI” để xem phương án tham khảo.',
+      'Có thể dùng “AI gợi ý ăn uống & tập luyện” để xem phương án tham khảo.',
     ],
   },
   {
@@ -79,7 +79,7 @@ const steps = [
     section: 'workout',
     action: 'Theo dõi tập luyện',
     items: [
-      'Ghi nhận “Có đi tập” hoặc “Nghỉ hôm nay”.',
+      'Ghi nhận “Có đi tập” hoặc “Bỏ lỡ hôm nay”.',
       'Nhấn “Xem chi tiết” để đọc hướng dẫn từng bài.',
       'Bắt đầu và đánh dấu hoàn thành từng bài; hoàn thành cả buổi để chuyển sang buổi kế tiếp.',
     ],

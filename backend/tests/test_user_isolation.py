@@ -21,6 +21,13 @@ from .support import authenticated_client, register_account
     "method,path,payload",
     [
         ("get", "/api/profile", None),
+        ("post", "/api/nutrition/estimate", {"name": "Pịa Tây Bắc"}),
+        (
+            "post",
+            "/api/meal-plans/generate",
+            {"week_start": "2027-01-04", "target_kcal": 1800, "avoid_tags": []},
+        ),
+        ("get", "/api/meal-plans/1", None),
         ("get", "/api/foods", None),
         ("get", "/api/dashboard", None),
         ("get", "/api/food-history", None),
