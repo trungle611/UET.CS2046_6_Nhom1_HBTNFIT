@@ -1,0 +1,160 @@
+# Sử dụng và kiến trúc HBTNFIT
+
+Các lệnh bên dưới đều chạy từ **gốc repo**, nơi có `backend/` và `frontend/`. Xem [README](../README.md) để bắt đầu nhanh.
+
+HBTNFIT dùng React + Vite, FastAPI và SQLite. Ứng dụng kết nối ăn uống, tài khoản, tập luyện và mục tiêu cá nhân. Dữ liệu cá nhân được giới hạn theo tài khoản đăng nhập. Trang Cá nhân tính thử/lưu kcal, protein, carb và chất béo, tạo gợi ý theo CSV và chuyển sang Ăn uống để theo dõi.
+
+Xem [hướng dẫn Windows, macOS, tunnel và cấu hình frontend Vercel/backend lưu bền](DEPLOYMENT.md). File `.env.example` chỉ là mẫu; giữ nguyên `.env` riêng nếu đã có.
+
+Backend nạp hai danh mục CSV trong `data/` khi khởi động. Xem [mô tả cấu trúc, đơn vị và nguồn dữ liệu](../data/README.md).
+
+Xem [bản ứng viên nộp bài và quy trình tổng duyệt](RELEASE.md). Chạy toàn bộ kiểm tra bằng `python scripts/check_release.py` trong môi trường đã cài đủ thư viện.
+
+## Chạy local
+
+Yêu cầu Python 3.11+, Node.js 22 và Git. Chạy các lệnh sau từ thư mục gốc repo:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r backend\requirements-dev.txt
+if (!(Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
+cd backend
+..\.venv\Scripts\python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Mở terminal khác từ thư mục gốc repo:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Mở [frontend](http://127.0.0.1:5173), đăng ký một tài khoản rồi đăng nhập để thử ăn uống và tập luyện. Tài liệu API ở [Swagger](http://127.0.0.1:8000/docs). Hai cổng 8000 và 5173 cần còn trống.
+
+Để nhận diện thật, điền `GEMINI_API_KEY` và model được phép sử dụng trong `backend/.env`. Có thể điền `GEMINI_FALLBACK_API_KEY` nếu có khóa dự phòng. Không có key vẫn chạy được ứng dụng và kiểm thử bằng giả lập; giao diện sẽ báo lỗi nhận diện và cho nhập món thủ công. Không có chế độ giả lập Gemini được bật sẵn trong ứng dụng.
+
+Với dự án mới, SQLite và ảnh lưu trong `backend/.runtime` nếu chưa đặt `APP_DATA_DIR`. Dự án cũ giữ database tại gốc/backend và thư mục ảnh cũ khi chỉ có một lựa chọn. Đường dẫn không phụ thuộc thư mục chạy lệnh. Nếu có hai DB cũ, phải chọn đường dẫn tuyệt đối trong `DATABASE_URL`. Mọi API dữ liệu cá nhân yêu cầu Bearer token hợp lệ, phiên chưa bị thu hồi và tài khoản còn tồn tại. Backend lấy `user_id` từ token đã xác minh, bỏ qua `X-Visitor-Id`; frontend không được chỉ định chủ sở hữu qua payload. Không commit `.env`, database, ảnh người dùng hoặc thư mục runtime.
+
+## Database mới và nâng cấp database cũ
+
+Không copy database hoặc `.env` giữa các thành viên. Mỗi máy tạo DB riêng, dùng cùng CSV trong repo.
+
+- Database mới: chạy backend lần đầu sẽ tự tạo bảng và nạp CSV. Có thể thực hiện riêng bằng `python -m app.init_db` từ thư mục `backend` sau khi cấu hình `.env`.
+- Để tạo DB mới mà vẫn giữ bản cũ: tắt backend, đặt `DATABASE_URL=sqlite:///./hbtnfit_moi.db` trong `backend/.env`, rồi chạy lệnh khởi tạo. Không xóa file DB cũ.
+- Trước khi nâng cấp DB có dữ liệu: tắt backend, sao lưu file `.db` và thư mục `backend/uploads/scans`. Nếu SQLite còn file `-wal`/`-shm`, cần đóng hết kết nối trước khi sao chép, hoặc dùng công cụ backup SQLite. Sao lưu cả `.runtime/auth-secret` nếu đang dùng khóa local tự sinh.
+- Khi khởi động bản mới, migration tự đổi cột `visitor_id` thành `user_id`, bổ sung cột sở hữu còn thiếu và index. Chạy lại không tạo trùng bảng hoặc xóa bản ghi.
+- Dữ liệu phiên demo cũ vẫn được giữ, nhưng không tự gán cho tài khoản mới. Chỉ token hợp lệ của một tài khoản có đúng ID mới truy cập được dữ liệu. Lịch tập cũ chưa có chủ sở hữu được giữ trong DB nhưng không đưa vào lịch của tài khoản mới.
+- Model mới dùng khóa ngoại tới `users` và index theo `user_id`. Với DB SQLite cũ, migration giữ cấu trúc và ràng buộc sẵn có; không dựng lại toàn bộ bảng để bổ sung mọi khóa ngoại. Quyền truy cập vẫn được kiểm tra ở API.
+- DB mới tạo unique index cho hồ sơ, gợi ý và giáo án đang chọn theo tài khoản. Nếu DB cũ có nhiều hồ sơ cùng một ID, cần rà soát bản sao trước khi nâng cấp; không tự xóa bản ghi để vượt qua lỗi ràng buộc.
+- `username` đang ánh xạ vào cột SQL `users.email` để đọc được DB của bản trước. Giao diện/API chỉ sử dụng tên đăng nhập, không yêu cầu email.
+- Không lưu ảnh nhị phân vào SQLite: `scan_history` chỉ giữ khóa đường dẫn, metadata và kết quả; API xem ảnh luôn kiểm tra tài khoản sở hữu.
+
+SQLite cần phiên bản 3.25+ để đổi tên cột. Quy trình demo được kiểm thử bằng SQLite; cần kiểm tra riêng migration trước khi triển khai PostgreSQL với dữ liệu thật.
+
+## Tài khoản và phiên đăng nhập
+
+Đăng ký bằng tên đăng nhập, mật khẩu và xác nhận mật khẩu. Mật khẩu được băm PBKDF2 với salt; token được ký ở backend. Database chỉ lưu SHA-256 của token, không lưu token gốc. Đăng xuất thu hồi đúng phiên ở server, xóa token trên trình duyệt và hủy state của tài khoản cũ. Phiên trên thiết bị khác vẫn độc lập. Token sai, hết hạn, đã thu hồi hoặc thuộc tài khoản không tồn tại trả 401. Token có hạn 7 ngày. Sau khi nâng cấp lên bảng `auth_sessions`, người dùng cần đăng nhập lại một lần; tài khoản và dữ liệu cũ vẫn còn.
+
+Khi chạy local, nếu `AUTH_SECRET` để trống, ứng dụng tự sinh khóa ngẫu nhiên và lưu trong `backend/.runtime/auth-secret` (đã được Git bỏ qua). Không dùng khóa ký cố định công khai. Khi triển khai, cấu hình `AUTH_SECRET` riêng ít nhất 32 ký tự; các tiến trình backend phải dùng cùng khóa. Không đưa khóa thật, DB hoặc ảnh người dùng lên Git.
+
+## Mục tiêu cá nhân và Ăn uống
+
+1. Vào **Cá nhân**, nhập tuổi, chiều cao, cân nặng hiện tại/mong muốn, ngày hoàn thành, thông số sinh học và mức vận động. Chọn tăng/giảm/duy trì khớp hai mức cân nặng.
+2. **Tính thử** hiển thị kcal, protein, carb, chất béo và số ngày còn lại, không lưu vào hồ sơ. Đổi dữ liệu nhập sẽ ẩn kết quả cũ để tránh đọc nhầm.
+3. **Lưu mục tiêu** áp dụng bốn chỉ số vào theo dõi hằng ngày. **Lưu và xem ăn uống** lưu rồi chuyển thẳng tới thực đơn; có thể quay lại bằng **Sửa mục tiêu**.
+4. Protein theo cân nặng hiện tại và mức 1,2/1,6 g/kg đã chọn, không tính theo số kg muốn tăng. Kcal được điều chỉnh theo thời hạn và giới hạn trong công thức; xem cảnh báo thời hạn. Đây là số liệu ước tính để theo dõi, không bảo đảm kết quả cân nặng.
+5. **Lưu và nhận gợi ý AI** lưu hồ sơ trước rồi tạo hai phương án đủ sáng/trưa/tối từ CSV, loại thành phần cần tránh. Khẩu phần được điều chỉnh để gần kcal mục tiêu; tổng dinh dưỡng thực đơn được hiển thị để người dùng kiểm tra. Lỗi AI không xóa mục tiêu đã lưu.
+6. Chọn cách ăn để chuyển sang checklist theo bữa, nhập lượng ăn rồi tick khi đã ăn. Món mới được cộng sau tick/xác nhận. Chọn giáo án để chuyển sang Tập luyện. Đổi thông tin mục tiêu làm hết hiệu lực gợi ý cũ.
+
+## Tập luyện
+
+1. Vào **Tập luyện**, chọn một trong bốn giáo án: PPL hoặc Upper/Lower, theo nhóm tăng cơ hoặc giảm cân.
+2. Mở **Xem bài tập từng buổi** để xem tên bài cụ thể, nhóm cơ, số hiệp và số lần. Buổi tập hiển thị thêm hướng dẫn động tác và thời gian nghỉ.
+3. Chọn **Có đi tập** hoặc **Nghỉ hôm nay**. Lịch tháng hiển thị xanh cho ngày đi tập/hoàn thành, đỏ cho ngày đã chọn nghỉ; ngày chưa ghi nhận giữ màu xám.
+4. Bắt đầu từng bài rồi đánh dấu hoàn thành. Chỉ sau khi hoàn thành tất cả bài, lần đi tập sau mới chuyển sang buổi kế tiếp. Ngày nghỉ không đẩy lịch sang buổi mới.
+5. Trạng thái bài đã làm được giữ khi tiếp tục cùng buổi qua ngày khác. Chu kỳ mới không dùng lại trạng thái của chu kỳ trước. Bản này cho hoàn thành tối đa một buổi mỗi giáo án trong một ngày.
+6. Đổi giáo án không xóa lịch đi tập. Lịch tháng tổng hợp tất cả giáo án của cùng tài khoản; tiến độ từng giáo án được giữ riêng.
+
+## Luồng sử dụng
+
+1. Chọn bữa sáng, trưa, tối hoặc bữa phụ rồi tải ảnh JPG, PNG hoặc WEBP, tối đa 5 MB.
+2. Kiểm tra từng món Gemini gợi ý. Có thể chọn lại món trong CSV, nhập món mới hoặc bỏ món nhận diện sai.
+3. Sửa lượng ăn. Tô, quả, đĩa và các đơn vị đếm cần số nguyên; g và ml có thể nhập số thập phân. Dinh dưỡng xem trước cập nhật theo lượng ăn.
+4. Nhấn **Xác nhận thêm**. Chỉ lúc này món mới được cộng vào thực đơn. Mã xác nhận ngăn gửi lại cùng yêu cầu làm trùng món.
+5. Sửa hoặc xóa món trong thực đơn. Lịch sử ăn theo ngày và tổng dinh dưỡng cập nhật theo dữ liệu đã lưu.
+6. Lịch sử ảnh chỉ hiện bản ghi đã xác nhận, có nút **Xem ảnh**. Thời gian hiển thị theo múi giờ Việt Nam.
+
+Gợi ý và số liệu dinh dưỡng cần được người dùng kiểm tra. Các kiểm thử gọi AI bằng giả lập xác nhận luồng xử lý, không đánh giá độ chính xác của Gemini trên ảnh thật.
+
+## Lỗi Gemini và cấu hình khóa
+
+- Khóa chỉ được đọc ở backend từ `.env`; `.env.example` không chứa giá trị thật. Frontend không nhận khóa qua API.
+- Mỗi yêu cầu nhận diện dùng chung ngân sách tối đa 45 giây cho các lượt gọi AI, kể cả bước sửa tiếng Việt. Mỗi lượt gọi có timeout tối đa 20 giây và tối đa 3 lần thử trong một lần sinh JSON.
+- Timeout, mất kết nối, giới hạn lượt dùng, quá tải và lỗi xác thực được phân loại thành thông báo tiếng Việt. Khóa dự phòng khác khóa chính được thử sau lỗi đầu tiên phù hợp; lỗi yêu cầu không hợp lệ không được che bằng chuyển khóa.
+- Kết quả phải là JSON object và không chứa NaN/Infinity. Kết quả sai được báo lỗi nhận diện để người dùng thử lại hoặc nhập tay.
+- API scan không chuyển nguyên văn lỗi nhà cung cấp ra giao diện hoặc log ứng dụng. Nhận diện thất bại không tự thêm món hay làm thay đổi tổng thực đơn.
+
+Các kiểm thử dùng khóa giả và dịch vụ giả lập. Khả năng gọi API thật còn phụ thuộc cấu hình, quyền truy cập và tình trạng dịch vụ.
+
+## Chuẩn hóa kết quả nhận diện
+
+- Kiểm tra JSON trước khi ghép với CSV: danh sách tối đa 5 món, tối đa 3 nhãn mỗi món, nguyên liệu dạng danh sách chuỗi và độ tin cậy hợp lệ nếu có.
+- Phát hiện thêm tên món ngắn không dấu như `Pho ga`, yêu cầu viết lại tiếng Việt. Nếu bước sửa ngôn ngữ thay đổi cấu trúc, số liệu hoặc ID/đơn vị được bảo vệ thì trả lỗi để người dùng kiểm tra lại.
+- Đối chiếu CSV bằng nhãn chính; nhãn thay thế không tự tạo thêm lựa chọn món khác. Kết quả có độ tin cậy thấp cần người dùng kiểm tra, không ép khớp món trong danh mục.
+- Ước tính món ngoài danh mục dùng cơ sở 1 g; backend quy đổi về chuẩn lưu trữ tương ứng. Giá trị âm, không hữu hạn, sai kiểu hoặc vượt giới hạn không được dùng làm số liệu dinh dưỡng.
+
+Các kiểm tra này kiểm soát định dạng và tính nhất quán. Chúng không xác nhận thành phần hay dinh dưỡng thật chỉ từ ảnh; món vẫn phải được người dùng xác nhận trước khi lưu.
+
+## Cấu trúc
+
+```text
+backend/
+  app/main.py          API scan, thực đơn, khẩu phần và lịch sử
+  app/db.py            engine, session và cập nhật schema demo
+  app/models.py        model SQLAlchemy dùng chung
+  app/schemas.py       kiểm tra dữ liệu đầu vào
+  app/catalog.py       nạp CSV
+  app/core.py          đối chiếu món và tính dinh dưỡng
+  app/auth_routes.py   đăng ký, đăng nhập và thông tin phiên
+  app/migrations.py    nâng cấp quyền sở hữu dữ liệu cũ
+  app/init_db.py       lệnh tạo/nâng cấp DB và nạp CSV
+  app/workout_routes.py giáo án, tiến độ và lịch đi tập
+  app/workout_plans.py tên bài, nhóm cơ và hướng dẫn
+  app/ai.py            gọi Gemini và xử lý lỗi
+  app/scan_service.py  kiểm tra ảnh, chuẩn hóa món và lưu ảnh lịch sử
+  app/goals.py         tính mục tiêu và đánh giá lịch sử dinh dưỡng
+  app/profile_service.py kiểm tra hồ sơ và tuần tự hóa mục tiêu
+  app/profile_routes.py tính thử, tạo gợi ý và chọn phương án
+  app/settings.py      cấu hình đường dẫn dữ liệu bền
+  tests/              ăn uống, lỗi AI, hai tài khoản, migration và tập luyện
+frontend/
+  src/App.jsx          phiên đăng nhập, bố cục và điều hướng
+  src/AuthPage.jsx     biểu mẫu tài khoản
+  src/ProfilePanel.jsx hồ sơ, bốn chỉ số và lựa chọn gợi ý
+  src/WorkoutPlans.jsx chọn và xem giáo án
+  src/WorkoutPanel.jsx bài tập và lịch xanh/đỏ
+  src/api.js           hàm gọi API
+  src/constants.js     nhãn bữa ăn và dinh dưỡng
+  src/style.css        giao diện nền và responsive
+  src/ScanSection.jsx  tải ảnh, kiểm tra và xác nhận món
+  src/TodayMeals.jsx   thực đơn, sửa/xóa và tổng dinh dưỡng
+  src/ScanHistory.jsx  lịch sử quét và xem ảnh
+  src/FoodHistory.jsx  tổng hợp thực đơn theo ngày
+data/                  danh mục CSV và mô tả cấu trúc, đơn vị, nguồn
+```
+
+## Kiểm tra
+
+Từ thư mục gốc repo:
+
+```powershell
+.\.venv\Scripts\python -m pytest -q
+.\.venv\Scripts\python -m ruff check backend
+.\.venv\Scripts\python -m ruff format --check backend
+cd frontend
+npm run format:check
+npm run build
+```
+
+API key thật không cần thiết cho bộ kiểm thử. Các test dùng SQLite và thư mục ảnh tạm. Để chạy song song với một backend khác, có thể đặt `API_PROXY_TARGET` khi khởi động Vite; mặc định vẫn là `http://127.0.0.1:8000`.
