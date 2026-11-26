@@ -11,6 +11,7 @@ import {
   MoonStar,
   RefreshCw,
   Search,
+  Sparkles,
   SunMedium,
   Trash2,
   X,
@@ -24,6 +25,10 @@ const mealOptions = [
   { id: 'snack', label: 'Bữa phụ', hint: 'Ngoài bữa chính', icon: Cookie },
 ];
 const emptyItem = (manual = false) => ({
+  id: crypto.randomUUID(),
+  nutritionVersion: 0,
+  nutritionNote: '',
+  nutritionError: '',
   foodId: '',
   grams: 250,
   manual,
@@ -38,6 +43,38 @@ const emptyItem = (manual = false) => ({
   fat: '',
 });
 const nutrientKeys = NUTRIENT_KEYS;
+const foodName = (value, withoutAccents = false) => {
+  let name = String(value || '')
+    .normalize('NFC')
+    .toLocaleLowerCase('vi');
+  if (withoutAccents) name = name.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd');
+  return name.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+};
+function catalogMatches(name, foods) {
+  if (!name.trim()) return [];
+  const matches = (withoutAccents) =>
+    foods.filter((food) =>
+      [food.name, ...(food.aliases || [])].some(
+        (value) => foodName(value, withoutAccents) === foodName(name, withoutAccents),
+      ),
+    );
+  const exact = matches(false);
+  return exact.length ? exact : matches(true);
+}
+function validNutrition(item) {
+  const values = nutrientKeys.map((key) =>
+    item[key] === '' || item[key] == null
+      ? item.allowMissingNutrition
+        ? 0
+        : NaN
+      : Number(item[key]),
+  );
+  return (
+    values.every(
+      (value, index) => Number.isFinite(value) && value >= 0 && value <= (index === 0 ? 900 : 100),
+    ) && values.slice(1).reduce((sum, value) => sum + value, 0) <= 100.05
+  );
+}
 const hasNutrition = (food) =>
   food && nutrientKeys.every((key) => Number.isFinite(Number(food[`${key}_100g`])));
 const basisAmount = (food) => Number(food?.basis_amount || 100);
@@ -75,6 +112,7 @@ export default function ScanSection({
 }) {
   const picker = useRef(null);
   const scanInFlight = useRef(false);
+  const nutritionInFlight = useRef(false);
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState('');
   const [scan, setScan] = useState(null);
@@ -92,7 +130,97 @@ export default function ScanSection({
   );
 
   function update(index, changes) {
-    setItems((current) => current.map((item, i) => (i === index ? { ...item, ...changes } : item)));
+    const nutritionChanged = [
+      'search',
+      'foodId',
+      'custom',
+      'allowMissingNutrition',
+      ...nutrientKeys,
+    ].some((key) => key in changes);
+    setItems((current) =>
+      current.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              ...(nutrientKeys.some((key) => key in changes) ? { estimated: false } : {}),
+              ...(['search', 'foodId', 'custom'].some((key) => key in changes)
+                ? { catalogFood: null }
+                : {}),
+              nutritionVersion: (item.nutritionVersion || 0) + (nutritionChanged ? 1 : 0),
+              nutritionNote: '',
+              nutritionError: '',
+              ...changes,
+            }
+          : item,
+      ),
+    );
+  }
+  function useCatalog(index, food) {
+    update(index, {
+      foodId: food.id,
+      catalogFood: food,
+      custom: false,
+      estimated: false,
+      grams: defaultQuantity(food),
+    });
+  }
+  async function estimateNutrition(index) {
+    const item = items[index];
+    const name = item?.search.trim();
+    if (busy || nutritionInFlight.current || !item?.custom || !name || name.length < 2) return;
+    const matches = catalogMatches(name, foods);
+    if (matches.length === 1) {
+      useCatalog(index, matches[0]);
+      return;
+    }
+    if (matches.length > 1) return;
+    nutritionInFlight.current = true;
+    setBusy(`nutrition:${item.id}`);
+    update(index, { nutritionError: '', nutritionNote: '' });
+    const apply = (changes) =>
+      setItems((current) =>
+        current.map((candidate) =>
+          candidate.id === item.id &&
+          candidate.nutritionVersion === item.nutritionVersion &&
+          candidate.custom &&
+          !candidate.skipped
+            ? { ...candidate, ...changes }
+            : candidate,
+        ),
+      );
+    try {
+      const result = await call('/api/nutrition/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (result.source === 'catalog') {
+        const food = result.food;
+        apply({
+          foodId: food.id,
+          catalogFood: food,
+          custom: false,
+          estimated: false,
+          grams: defaultQuantity(food),
+        });
+      } else {
+        const values = result.nutrition_100g;
+        if (!values || !validNutrition({ ...values, allowMissingNutrition: false }))
+          throw new Error('AI chưa trả đủ số liệu hợp lệ cho 100 g.');
+        apply({
+          ...values,
+          estimated: true,
+          estimatedFrom: 'name',
+          allowMissingNutrition: false,
+          nutritionNote: result.note,
+        });
+      }
+    } catch (err) {
+      apply({ nutritionError: err.message });
+    } finally {
+      nutritionInFlight.current = false;
+      setBusy('');
+    }
   }
   function clearPhoto() {
     setFile(null);
@@ -166,7 +294,7 @@ export default function ScanSection({
   const active = items.filter((item) => !item.skipped);
   const validAmount = (item) => {
     const amount = Number(item.grams);
-    const food = foods.find((candidate) => candidate.id === item.foodId);
+    const food = foods.find((candidate) => candidate.id === item.foodId) || item.catalogFood;
     const unit = item.custom ? 'g' : quantityUnit(food);
     return amount > 0 && amount <= 2000 && (!isDiscreteUnit(unit) || Number.isInteger(amount));
   };
@@ -177,6 +305,7 @@ export default function ScanSection({
         (item.foodId ||
           (item.custom &&
             item.search.trim().length >= 2 &&
+            validNutrition(item) &&
             ((Number(item.kcal) > 0 &&
               nutrientKeys.every((key) => item[key] !== '' && item[key] != null)) ||
               item.allowMissingNutrition))) &&
@@ -387,6 +516,7 @@ export default function ScanSection({
             const usableCandidates = dish.candidates.filter(hasNutrition);
             const selected =
               foods.find((food) => food.id === item.foodId) ||
+              item.catalogFood ||
               usableCandidates.find((food) => food.id === item.foodId);
             const previewFood = selected || (!item.manual ? usableCandidates[0] : null);
             const values =
@@ -401,16 +531,17 @@ export default function ScanSection({
                   ? catalogNutrition(previewFood, item.grams)
                   : null;
             const unit = item.custom ? 'g' : quantityUnit(previewFood);
-            const query = item.search.toLocaleLowerCase('vi');
+            const query = foodName(item.search, true);
+            const knownFoods = catalogMatches(item.search, foods).filter(hasNutrition);
             const filtered = foods.filter(
               (food) =>
                 hasNutrition(food) &&
                 (!query ||
-                  food.name.toLocaleLowerCase('vi').includes(query) ||
-                  food.aliases.some((alias) => alias.toLocaleLowerCase('vi').includes(query))),
+                  foodName(food.name, true).includes(query) ||
+                  (food.aliases || []).some((alias) => foodName(alias, true).includes(query))),
             );
             return (
-              <div className={`recognized-dish ${item.skipped ? 'is-skipped' : ''}`} key={index}>
+              <div className={`recognized-dish ${item.skipped ? 'is-skipped' : ''}`} key={item.id}>
                 <div className="dish-top">
                   <div>
                     <span className="dish-number">MÓN {String(index + 1).padStart(2, '0')}</span>
@@ -507,12 +638,14 @@ export default function ScanSection({
                                 search: event.target.value,
                                 foodId: '',
                                 custom: true,
+                                ...(!item.custom ? { grams: 250 } : {}),
                                 estimated: false,
                                 allowMissingNutrition: false,
                                 ...Object.fromEntries(nutrientKeys.map((key) => [key, ''])),
                               })
                             }
                             placeholder="Nhập tên món"
+                            maxLength={160}
                           />
                         </label>
                         {filtered.length > 0 && (
@@ -554,8 +687,50 @@ export default function ScanSection({
                         </label>
                         {item.custom && (
                           <>
+                            {knownFoods.length ? (
+                              <div className="data-note">
+                                <p>
+                                  Món này đã có dữ liệu trong danh mục; bạn có thể dùng số liệu có
+                                  sẵn.
+                                </p>
+                                {knownFoods.length === 1 && (
+                                  <button
+                                    className="secondary-button"
+                                    disabled={!!busy}
+                                    onClick={() => useCatalog(index, knownFoods[0])}
+                                  >
+                                    Dùng dữ liệu có sẵn
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                className="secondary-button"
+                                disabled={!!busy || item.search.trim().length < 2}
+                                onClick={() => estimateNutrition(index)}
+                              >
+                                {busy === `nutrition:${item.id}` ? (
+                                  <LoaderCircle size={16} className="spin" />
+                                ) : (
+                                  <Sparkles size={16} />
+                                )}
+                                {busy === `nutrition:${item.id}`
+                                  ? 'Đang ước tính…'
+                                  : 'AI ước tính dinh dưỡng / 100 g'}
+                              </button>
+                            )}
+                            {item.nutritionError && (
+                              <p className="data-note" role="alert">
+                                {item.nutritionError}
+                              </p>
+                            )}
+                            {item.nutritionNote && (
+                              <p className="data-note" role="status">
+                                {item.nutritionNote}
+                              </p>
+                            )}
                             <p className="data-note">
-                              <b>Dinh dưỡng ước tính trong 1 g món ăn</b>
+                              <b>Dinh dưỡng ước tính trong 100 g món ăn</b>
                             </p>
                             <div className="custom-macros">
                               {[
@@ -565,23 +740,16 @@ export default function ScanSection({
                                 ['fat', 'Chất béo (g)'],
                               ].map(([key, label]) => (
                                 <label key={key}>
-                                  {label} / 1 g
+                                  {label} / 100 g
                                   <input
                                     type="number"
                                     min="0"
-                                    max={key === 'kcal' ? '9' : '1'}
+                                    max={key === 'kcal' ? '900' : '100'}
                                     step="any"
-                                    value={
-                                      item[key] === '' || item[key] == null
-                                        ? ''
-                                        : Number((Number(item[key]) / 100).toFixed(6))
-                                    }
+                                    value={item[key] ?? ''}
                                     onChange={(event) =>
                                       update(index, {
-                                        [key]:
-                                          event.target.value === ''
-                                            ? ''
-                                            : Number((Number(event.target.value) * 100).toFixed(4)),
+                                        [key]: event.target.value,
                                         allowMissingNutrition: false,
                                       })
                                     }
@@ -591,12 +759,18 @@ export default function ScanSection({
                               ))}
                             </div>
                             <p className="data-note">
-                              {item.estimated
-                                ? 'Gemini ước tính cho 1 g món đã chế biến; bạn hãy sửa nếu cần. '
-                                : 'Chưa có đủ số liệu; bạn có thể nhập tay. '}
-                              Dinh dưỡng khẩu phần = giá trị trên 1 g × số gram bạn nhập. Chỉ lưu
-                              khi bạn đã kiểm tra bốn ô.
+                              {item.estimated ? '' : 'Bạn có thể nhập hoặc sửa số liệu cho 100 g. '}
+                              Dinh dưỡng khẩu phần = giá trị trên 100 g × số gram bạn nhập / 100.
+                              Chỉ lưu khi bạn đã kiểm tra bốn ô.
                             </p>
+                            {nutrientKeys.every((key) => item[key] !== '' && item[key] != null) &&
+                              !validNutrition(item) && (
+                                <p className="data-note" role="alert">
+                                  Số liệu cho 100 g phải hữu hạn, không âm; kcal tối đa 900, mỗi
+                                  chất tối đa 100 g và tổng protein, carb, chất béo không vượt 100
+                                  g.
+                                </p>
+                              )}
                             {!(
                               Number(item.kcal) > 0 &&
                               nutrientKeys.every((key) => item[key] !== '' && item[key] != null)
@@ -666,7 +840,7 @@ export default function ScanSection({
                         </div>
                       </div>
                     )}
-                    {item.custom && item.estimated && (
+                    {item.custom && item.estimated && item.estimatedFrom !== 'name' && (
                       <p className="source-note">
                         Ước tính từ Gemini theo ảnh, chưa kiểm chứng; chỉ cộng vào thực đơn sau khi
                         bạn xác nhận.

@@ -25,7 +25,7 @@ Nếu dùng môi trường `.local/venv`, thay đường dẫn Python bằng `.\
 
 Lệnh lần lượt chạy pytest, Ruff, kiểm tra định dạng backend, npm ci, Prettier, build và CLI đánh giá. Nó dừng ngay nếu một bước thất bại. Log và `checks.json` được ghi trong `.local/release-checks/<mã-lần-chạy>/`, không đưa lên Git mặc định. Mỗi lần chạy ghi commit và trạng thái thay đổi cục bộ để đối chiếu.
 
-Mốc hiện tại kỳ vọng có 132 test backend đạt. Nếu thêm test sửa lỗi sau đó, báo đúng số lượng thực tế của phiên bản mới. Kết quả tự động không thay thế kiểm tra dịch vụ Gemini thật hoặc dữ liệu thật.
+Số test thay đổi khi bổ sung chức năng hoặc sửa lỗi; lấy số lượng thực tế từ log của đúng commit được kiểm tra. Kết quả tự động không thay thế kiểm tra dịch vụ Gemini thật hoặc dữ liệu thật.
 
 ## Tổng duyệt chức năng
 
@@ -40,7 +40,7 @@ Mốc hiện tại kỳ vọng có 132 test backend đạt. Nếu thêm test s�
 ## Giới hạn được ghi nhận
 
 - Lần đánh giá Gemini có minh chứng hiện dùng hai ảnh tổng hợp ở split smoke. Lần chạy ngày 25/11/2026 có F1 66,67% và 1/2 ảnh đúng toàn bộ theo nhãn khóa; không suy rộng thành độ chính xác thực tế.
-- Chưa có minh chứng đánh giá cuối trên tập ảnh thực tế đã được hai người duyệt độc lập và tách dev/test. Đây là phần dữ liệu/nghiệm thu còn phải bổ sung, không được ghi hoàn tất chỉ dựa vào 132 test hoặc hai ảnh demo.
+- Chưa có minh chứng đánh giá cuối trên tập ảnh thực tế đã được hai người duyệt độc lập và tách dev/test. Đây là phần dữ liệu/nghiệm thu còn phải bổ sung, không được ghi hoàn tất chỉ dựa vào bộ test tự động hoặc hai ảnh demo.
 - Dinh dưỡng CSV và ước tính từ ảnh còn giới hạn về nguồn/độ chính xác; người dùng cần kiểm tra trước khi xác nhận.
 - Cần cấu hình Gemini, quota, domain và nơi lưu dữ liệu bền cho môi trường sử dụng thật. Cấu hình deploy đã chuẩn bị; RC không xác nhận đã triển khai production.
 - Các file `.idea/` được giữ trong repo theo lựa chọn của nhóm. Mỗi máy chọn Python interpreter đang dùng nếu IDE báo SDK không hợp lệ; không thay đổi hoặc xóa database để chữa lỗi IDE.

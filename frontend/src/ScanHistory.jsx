@@ -62,7 +62,9 @@ export default function ScanHistory({ call, refreshKey, onError }) {
         </div>
         {loading && <LoaderCircle className="spin" size={19} />}
       </div>
-      <p className="panel-lead">Xem lại ảnh và món đã xác nhận trong phiên sử dụng của bạn.</p>
+      <p className="panel-lead">
+        Xem lại ảnh, tên món bạn đã xác nhận và gợi ý AI ban đầu của riêng tài khoản này.
+      </p>
       {!loading && items.length === 0 && (
         <div className="history-empty">
           <ImageOff size={24} />
@@ -71,7 +73,10 @@ export default function ScanHistory({ call, refreshKey, onError }) {
       )}
       <div className="history-list">
         {items.map((item) => {
-          const names = item.dishes.map((dish) => dish.labels?.[0]).filter(Boolean);
+          const suggestedNames = item.dishes.map((dish) => dish.labels?.[0]).filter(Boolean);
+          const names = item.confirmed_at
+            ? (item.confirmed_dishes || []).map((dish) => dish.name).filter(Boolean)
+            : suggestedNames;
           return (
             <article className="history-card" key={item.id}>
               <div className="history-date">
@@ -93,7 +98,18 @@ export default function ScanHistory({ call, refreshKey, onError }) {
               </div>
               <div className="history-body">
                 <span className="history-meal">{mealLabels[item.meal_type] || 'Bữa ăn'}</span>
-                <strong>{names.length ? names.join(', ') : 'Chưa nhận diện được món'}</strong>
+                <strong>
+                  {names.length
+                    ? names.join(', ')
+                    : item.confirmed_at
+                      ? 'Món đã xác nhận; không còn tên trong nhật ký'
+                      : 'Chưa nhận diện được món'}
+                </strong>
+                {item.confirmed_at &&
+                  suggestedNames.length > 0 &&
+                  suggestedNames.join(', ') !== names.join(', ') && (
+                    <small>AI gợi ý ban đầu: {suggestedNames.join(', ')}</small>
+                  )}
                 <span className={`history-status ${item.confirmed_at ? 'confirmed' : 'pending'}`}>
                   {item.confirmed_at ? (
                     <>
@@ -166,10 +182,10 @@ export default function ScanHistory({ call, refreshKey, onError }) {
               {new Intl.DateTimeFormat('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
-                timeZone: 'Asia/Ho_Chi_Minh',
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
+                timeZone: 'Asia/Ho_Chi_Minh',
               }).format(new Date(viewer.item.created_at))}
             </small>
           </div>

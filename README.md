@@ -7,6 +7,8 @@
 - Nhận diện món qua Gemini, kiểm tra khẩu phần, thực đơn và lịch sử ăn uống.
 - Giáo án PPL/Upper-Lower, tiến độ bài tập và lịch đi tập/nghỉ.
 
+Món ngoài danh mục có nút **AI ước tính dinh dưỡng / 100 g**; món đã có dùng số liệu sẵn có mà không gọi AI. Người dùng kiểm tra, sửa khẩu phần rồi xác nhận. Lịch sử ảnh hiển thị tên món đã xác nhận và giữ gợi ý AI ban đầu để đối chiếu.
+
 ## Chạy nhanh
 
 Yêu cầu Python 3.11+, Node.js 22 và Git. Chạy từ gốc repo, dùng môi trường Python trên chính máy đang chạy. Nếu đã có môi trường và cấu hình riêng, dùng lại chúng.

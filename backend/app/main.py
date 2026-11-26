@@ -24,6 +24,7 @@ from .core import (
 )
 from .db import get_db, initialize_database
 from .goals import assess_daily_intake, daily_targets
+from .meal_plan_routes import router as meal_plan_router
 from .models import (
     AiRun,
     BatchSubmission,
@@ -34,6 +35,7 @@ from .models import (
     ProfileGuidance,
     ScanHistory,
 )
+from .nutrition_service import matching_foods
 from .profile_routes import router as profile_router
 from .profile_service import (
     GOAL_ANALYSIS_VERSION,
@@ -59,6 +61,7 @@ from .schemas import (
     ChecklistToggleIn,
     LogIn,
     LogUpdate,
+    NutritionEstimateIn,
     ProfileIn,
 )
 from .workout_routes import router as workout_router
@@ -90,6 +93,10 @@ def utc_timestamp(value):
 @asynccontextmanager
 async def lifespan(app):
     initialize_database()
+    if os.getenv("SEED_DEMO") == "1":
+        from .seed_demo import seed
+
+        seed()
     yield
 
 
@@ -97,6 +104,7 @@ app = FastAPI(title="HBTNFIT API", version="0.1.0", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(workout_router)
 app.include_router(profile_router)
+app.include_router(meal_plan_router)
 
 
 LOCAL_ORIGINS = [
@@ -178,12 +186,46 @@ def food_data(food):
     }
 
 
-def scan_history_data(record):
+def confirmed_dish(log, food):
+    return {
+        "log_id": log.id,
+        "food_id": food.id,
+        "name": food.display_name or food.name,
+        "amount": log.grams,
+        "unit": food.basis_unit or "g",
+        "meal_type": log.meal_type,
+    }
+
+
+def scan_confirmation_data(record, db):
+    snapshot = record.result.get("confirmed_dishes")
+    if isinstance(snapshot, list):
+        return snapshot
+    # Old records kept only AI labels. Recover the confirmed names from their
+    # submission while the associated, account-scoped food logs still exist.
+    submission = db.get(BatchSubmission, scoped_key(db, record.id))
+    if submission is None:
+        submission = db.get(BatchSubmission, record.id)
+    if submission is None:
+        return None
+    dishes = []
+    for log_id in submission.log_ids:
+        log = db.get(FoodLog, log_id)
+        if log is None or log.user_id != current_user_id(db):
+            continue
+        food = db.get(Food, log.food_id)
+        if visible_food(food, db):
+            dishes.append(confirmed_dish(log, food))
+    return dishes
+
+
+def scan_history_data(record, db):
     return {
         "id": record.id,
         "meal_type": record.meal_type,
         "status": record.status,
         "dishes": record.result.get("dishes", []),
+        "confirmed_dishes": scan_confirmation_data(record, db),
         "created_at": utc_timestamp(record.created_at),
         "confirmed_at": utc_timestamp(record.confirmed_at),
         "image_url": f"/api/scan-history/{record.id}/image",
@@ -447,6 +489,57 @@ async def scan(
     }
 
 
+@app.post("/api/nutrition/estimate")
+async def estimate_nutrition(payload: NutritionEstimateIn, db: Session = Depends(get_db)):
+    name = payload.name.strip()
+    if len(name) < 2:
+        raise HTTPException(422, "Hãy nhập tên món có ít nhất 2 ký tự")
+    matches = matching_foods(name, accessible_foods(db, include_aliases=True))
+    if len(matches) > 1:
+        raise HTTPException(409, "Tên này khớp nhiều món. Hãy chọn đúng món trong danh mục")
+    if matches:
+        return {"source": "catalog", "food": food_data(matches[0])}
+    started, status = perf_counter(), "ok"
+    try:
+        values = await run_in_threadpool(ai.estimate_nutrition, name)
+        if values is None:
+            status = "unknown"
+    except (ai.AIConfigurationError, ai.AIResponseError, ai.AIServiceError) as exc:
+        status = getattr(exc, "reason", "unavailable")
+        raise HTTPException(503, str(exc)) from None
+    except Exception as exc:
+        status = "service_error"
+        logger.warning("nutrition estimate error_type=%s", type(exc).__name__)
+        raise HTTPException(
+            503, "Chưa ước tính được dinh dưỡng. Hãy thử lại hoặc nhập tay"
+        ) from None
+    finally:
+        db.add(
+            AiRun(
+                user_id=current_user_id(db),
+                purpose="nutrition_estimate",
+                prompt_version=ai.NUTRITION_PROMPT_VERSION,
+                model_id=os.getenv("GEMINI_MODEL", ai.DEFAULT_MODEL),
+                latency_ms=round((perf_counter() - started) * 1000),
+                status=status,
+            )
+        )
+        db.commit()
+    if values is None:
+        raise HTTPException(
+            422, "Chưa đủ thông tin để ước tính. Hãy nhập rõ tên món và cách chế biến"
+        )
+    return {
+        "source": "ai",
+        "name": name,
+        "basis_amount": 100,
+        "basis_unit": "g",
+        "nutrition_100g": values,
+        "is_verified": False,
+        "note": "AI ước tính theo tên món cho 100 g; hãy kiểm tra và sửa trước khi xác nhận.",
+    }
+
+
 @app.get("/api/scan-history")
 def get_scan_history(
     limit: int = Query(12, ge=1, le=50), offset: int = Query(0, ge=0), db: Session = Depends(get_db)
@@ -459,7 +552,7 @@ def get_scan_history(
         .limit(limit + 1)
     ).all()
     return {
-        "items": [scan_history_data(record) for record in records[:limit]],
+        "items": [scan_history_data(record, db) for record in records[:limit]],
         "has_more": len(records) > limit,
     }
 
@@ -647,6 +740,10 @@ def add_logs_batch(payload: BatchLogIn, db: Session = Depends(get_db)):
     if history:
         history.confirmed_at = datetime.now(timezone.utc)
         history.meal_type = payload.items[0].meal_type
+        history.result = {
+            **history.result,
+            "confirmed_dishes": [confirmed_dish(log, food) for log, food in created],
+        }
     save_today_nutrition_goal(db)
     db.commit()
     return {"entries": [log_response(log, food) for log, food in created]}
