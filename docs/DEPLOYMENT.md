@@ -1,11 +1,19 @@
 # Chạy demo và cấu hình triển khai HBTNFIT
 
+Các lệnh trong tài liệu chạy từ **gốc repo**. Xem [README](../README.md) để bắt đầu và [DEMO.md](DEMO.md) để chọn kịch bản trình bày.
+
 ## 1. Chuẩn bị
 
 - Python 3.11 trở lên, Node.js 22, Git. Kiểm tra `python --version`, `node --version`, `npm --version`.
 - Với Mac Intel chạy macOS 12, dùng Node 22 phù hợp hệ điều hành; không dùng bản Node mới hơn yêu cầu macOS mới hơn. [Bản tải Node 22](https://nodejs.org/en/download/archive/v22).
 - Luôn mở terminal tại thư mục gốc có `backend/` và `frontend/`. Không chạy lệnh cài backend trong `frontend/`.
 - Giữ nguyên `.env` và database đang dùng. Chỉ sao chép `.env.example` khi chưa có `.env`.
+
+### Cập nhật từ bản còn theo dõi `.idea`
+
+Tài liệu triển khai/RC được gom vào `docs/`; `scripts/check_release.py`, backend, frontend và đường dẫn dữ liệu giữ nguyên. Các link tài liệu của tag RC1 vẫn trỏ đến cấu trúc cũ tại đúng tag đó.
+
+`.idea/` được bỏ khỏi Git để mỗi máy tự chọn SDK/interpreter. Trước khi pull bản thay đổi này, nếu muốn giữ cấu hình IDE hiện tại thì sao chép `.idea/` ra thư mục riêng ngoài repo. Git có thể gỡ các file từng được theo dõi khi cập nhật commit. Sau đó mở lại dự án và chọn Python có sẵn trong `.venv` hoặc `.local/venv` của chính máy đó. Nếu cần, khôi phục bản sao cấu hình IDE riêng; Git sẽ bỏ qua nó. Không cần tạo lại môi trường đang chạy tốt, xóa database hoặc chép môi trường Python của máy khác.
 
 ## 2. Windows PowerShell
 
