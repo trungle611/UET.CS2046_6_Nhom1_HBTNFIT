@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { CalendarDays, Dumbbell, House, Menu, UserRound, UtensilsCrossed } from 'lucide-react';
+import {
+  Bell,
+  CalendarDays,
+  ChevronDown,
+  CircleHelp,
+  CircleUserRound,
+  Dumbbell,
+  House,
+  LogOut,
+  Menu,
+  UtensilsCrossed,
+} from 'lucide-react';
+import GuidePanel from './GuidePanel.jsx';
 import FoodHistory from './FoodHistory.jsx';
 import AuthPage from './AuthPage.jsx';
 import ScanHistory from './ScanHistory.jsx';
@@ -12,9 +24,10 @@ import { apiCall, getAuthToken, saveAuthToken, clearAuthToken } from './api.js';
 
 const navigation = [
   { id: 'home', label: 'Trang chủ', icon: House },
-  { id: 'food', label: 'Ăn uống', icon: UtensilsCrossed },
   { id: 'workout', label: 'Tập luyện', icon: Dumbbell },
-  { id: 'profile', label: 'Cá nhân', icon: UserRound },
+  { id: 'food', label: 'Ăn uống', icon: UtensilsCrossed },
+  { id: 'profile', label: 'Cá nhân', icon: CircleUserRound },
+  { id: 'guide', label: 'Hướng dẫn', icon: CircleHelp },
 ];
 
 function currentMealType() {
@@ -23,6 +36,115 @@ function currentMealType() {
   if (hour >= 10 && hour < 14) return 'lunch';
   if (hour >= 17 && hour < 21) return 'dinner';
   return 'snack';
+}
+
+function Header({ user, onHome, onProfile, onLogout, navOpen, setNavOpen, loggingOut }) {
+  const displayName = user.full_name || user.username || 'Tài khoản';
+  const [showBell, setShowBell] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+
+  function openProfile() {
+    setShowAccount(false);
+    onProfile();
+  }
+
+  function logout() {
+    setShowAccount(false);
+    onLogout();
+  }
+
+  return (
+    <header className="topbar">
+      <div className="topbar-inner">
+        <button
+          className="menu-toggle"
+          aria-label="Mở điều hướng"
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen(!navOpen)}
+        >
+          <Menu size={22} />
+        </button>
+        <button className="brand" onClick={onHome} aria-label="Về trang chủ HBTNFIT">
+          <span className="brand-logo-frame">
+            <img className="brand-logo" src="/Logo_HUET.svg" alt="Logo Đại học Công nghệ" />
+          </span>
+          <span className="brand-words">
+            <span className="brand-name">HBTNFIT</span>
+            <span className="brand-school">ĐẠI HỌC CÔNG NGHỆ</span>
+          </span>
+        </button>
+        <span className="topbar-caption">Sống khỏe theo cách của bạn</span>
+        <div className="top-actions">
+          <div className="notification-wrap">
+            <button
+              className="header-icon"
+              aria-label="Thông báo"
+              aria-expanded={showBell}
+              onClick={() => setShowBell(!showBell)}
+            >
+              <Bell size={19} />
+            </button>
+            {showBell && <div className="notification-popover">Chưa có thông báo mới.</div>}
+          </div>
+          <div className="account-wrap">
+            <button
+              className="account-button"
+              aria-label="Mở menu tài khoản"
+              aria-expanded={showAccount}
+              onClick={() => setShowAccount(!showAccount)}
+            >
+              <span className="avatar">{displayName.slice(0, 1).toLocaleUpperCase('vi')}</span>
+              <span>{displayName}</span>
+              <ChevronDown size={15} />
+            </button>
+            {showAccount && (
+              <div className="account-popover">
+                <button onClick={openProfile}>
+                  <CircleUserRound size={15} /> Trang cá nhân
+                </button>
+                <button disabled={loggingOut} onClick={logout}>
+                  <LogOut size={15} /> {loggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Sidebar({ section, navOpen, navigate }) {
+  return (
+    <aside className={`sidebar ${navOpen ? 'open' : ''}`}>
+      <div className="sidebar-group">
+        <span className="sidebar-label">ĐIỀU HƯỚNG</span>
+        <nav aria-label="Điều hướng chính">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                className={`nav-item ${section === item.id ? 'active' : ''}`}
+                onClick={() => navigate(item.id)}
+                title={item.label}
+                aria-current={section === item.id ? 'page' : undefined}
+              >
+                <Icon size={19} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+      <div className="sidebar-bottom">
+        <div className="sidebar-note">
+          <span className="status-dot" /> Bản dùng thử Track 1
+        </div>
+        <small>HBTNFIT · 2026</small>
+      </div>
+    </aside>
+  );
 }
 
 export default function App() {
@@ -109,7 +231,7 @@ export default function App() {
 }
 
 function SignedInApp({ user, logout, loggingOut }) {
-  const [section, setSection] = useState('food');
+  const [section, setSection] = useState('home');
   const [navOpen, setNavOpen] = useState(false);
   const [foods, setFoods] = useState([]);
   const [dashboard, setDashboard] = useState(null);
@@ -165,58 +287,17 @@ function SignedInApp({ user, logout, loggingOut }) {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="topbar-inner">
-          <button
-            className="menu-toggle"
-            aria-label="Mở điều hướng"
-            aria-expanded={navOpen}
-            onClick={() => setNavOpen(!navOpen)}
-          >
-            <Menu size={22} />
-          </button>
-          <button className="brand" onClick={() => navigate('home')}>
-            <span className="brand-logo-frame">
-              <img className="brand-logo" src="/Logo_HUET.svg" alt="Logo Đại học Công nghệ" />
-            </span>
-            <span className="brand-words">
-              <span className="brand-name">HBTNFIT</span>
-              <span className="brand-school">ĐẠI HỌC CÔNG NGHỆ</span>
-            </span>
-          </button>
-          <span className="topbar-caption">Dinh dưỡng & Tập luyện</span>
-          <div className="account-actions">
-            <span>{user.username}</span>
-            <button className="link-button" disabled={loggingOut} onClick={logout}>
-              {loggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header
+        user={user}
+        onHome={() => navigate('home')}
+        onProfile={() => navigate('profile')}
+        onLogout={logout}
+        navOpen={navOpen}
+        setNavOpen={setNavOpen}
+        loggingOut={loggingOut}
+      />
       <div className="body-layout">
-        <aside className={`sidebar ${navOpen ? 'open' : ''}`}>
-          <div className="sidebar-group">
-            <span className="sidebar-label">ĐIỀU HƯỚNG</span>
-            <nav aria-label="Điều hướng chính">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    className={`nav-item ${section === item.id ? 'active' : ''}`}
-                    disabled={item.pending}
-                    title={item.pending ? 'Chưa có trong bản này' : item.label}
-                    aria-current={section === item.id ? 'page' : undefined}
-                    onClick={() => navigate(item.id)}
-                  >
-                    <Icon size={19} />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </aside>
+        <Sidebar section={section} navOpen={navOpen} navigate={navigate} />
         <main className="content">
           <div className="page-intro">
             <div>
@@ -230,14 +311,18 @@ function SignedInApp({ user, logout, loggingOut }) {
                     ? 'Tập luyện'
                     : section === 'profile'
                       ? 'Cá nhân'
-                      : 'Ăn uống'}
+                      : section === 'guide'
+                        ? 'Hướng dẫn sử dụng'
+                        : 'Ăn uống'}
               </h1>
               <p>
                 {section === 'workout'
                   ? 'Chọn giáo án, tiếp tục buổi đang tập và theo dõi lịch đi tập/nghỉ.'
                   : section === 'profile'
                     ? 'Cập nhật thông tin và mục tiêu dinh dưỡng của bạn.'
-                    : 'Nhận diện món ăn, xác nhận khẩu phần và theo dõi thực đơn.'}
+                    : section === 'guide'
+                      ? 'Thiết lập mục tiêu và làm quen với các chức năng chính.'
+                      : 'Nhận diện món ăn, xác nhận khẩu phần và theo dõi thực đơn.'}
               </p>
             </div>
           </div>
@@ -254,17 +339,12 @@ function SignedInApp({ user, logout, loggingOut }) {
           )}
           {!loaded ? (
             <p role="status">Đang tải thực đơn và danh mục món ăn…</p>
+          ) : section === 'guide' ? (
+            <GuidePanel onNavigate={navigate} />
           ) : section === 'profile' ? (
             <ProfilePanel profile={profile} call={apiCall} refresh={refresh} navigate={navigate} />
           ) : section === 'workout' ? (
             <div className="training-page">
-              <WorkoutPlans
-                plans={plans}
-                selectedId={workouts?.selected_plan?.id}
-                call={apiCall}
-                refresh={refresh}
-                onError={setNotice}
-              />
               {workouts?.selected_plan && (
                 <WorkoutPanel
                   workouts={workouts}
@@ -273,6 +353,13 @@ function SignedInApp({ user, logout, loggingOut }) {
                   onError={setNotice}
                 />
               )}
+              <WorkoutPlans
+                plans={plans}
+                selectedId={workouts?.selected_plan?.id}
+                call={apiCall}
+                refresh={refresh}
+                onError={setNotice}
+              />
             </div>
           ) : (
             <>
