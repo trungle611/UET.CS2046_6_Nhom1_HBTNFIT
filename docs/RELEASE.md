@@ -62,4 +62,4 @@ git switch --detach v0.1.0-rc.1
 
 Lệnh trên dùng để xem/chạy lại bản đã chốt. Khi sửa lỗi, quay lại nhánh làm việc của mình và cập nhật từ `origin/develop`; không sửa trực tiếp trên tag.
 
-File `.env`, database, ảnh người dùng, khóa ký và thư mục môi trường Python là dữ liệu riêng của từng máy, không nằm trong gói source. Xem [DEPLOYMENT.md](DEPLOYMENT.md) để cấu hình, [DEMO.md](DEMO.md) để trình bày và [evaluation/README.md](../evaluation/README.md) để đánh giá AI.
+File `.env`, database, ảnh người dùng, khóa ký và thư mục môi trường Python là dữ liệu riêng của từng máy, không nằm trong gói source. Xem [DEPLOYMENT.md](DEPLOYMENT.md) để cấu hình và [evaluation/README.md](../evaluation/README.md) để đánh giá AI.

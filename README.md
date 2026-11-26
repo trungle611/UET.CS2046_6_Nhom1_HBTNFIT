@@ -49,7 +49,6 @@ Môi trường `.local/venv` dùng Python tại `.local/venv/Scripts/python.exe`
 | Cài đặt, môi trường, database và triển khai | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 | Sử dụng, kiến trúc và hành vi chi tiết | [docs/USAGE.md](docs/USAGE.md) |
 | Tổng duyệt và đóng phiên bản | [docs/RELEASE.md](docs/RELEASE.md) |
-| Kịch bản demo và phương án dự phòng | [docs/DEMO.md](docs/DEMO.md) |
 | Dữ liệu món và đơn vị khẩu phần | [data/README.md](data/README.md) |
 | Khóa nhãn và đánh giá AI | [evaluation/README.md](evaluation/README.md) |
 

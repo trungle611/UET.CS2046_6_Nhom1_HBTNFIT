@@ -1,6 +1,6 @@
 # Sử dụng và kiến trúc HBTNFIT
 
-Các lệnh bên dưới đều chạy từ **gốc repo**, nơi có `backend/` và `frontend/`. Xem [README](../README.md) để bắt đầu nhanh và [kịch bản demo](DEMO.md) để tổng duyệt.
+Các lệnh bên dưới đều chạy từ **gốc repo**, nơi có `backend/` và `frontend/`. Xem [README](../README.md) để bắt đầu nhanh.
 
 HBTNFIT dùng React + Vite, FastAPI và SQLite. Ứng dụng kết nối ăn uống, tài khoản, tập luyện và mục tiêu cá nhân. Dữ liệu cá nhân được giới hạn theo tài khoản đăng nhập. Trang Cá nhân tính thử/lưu kcal, protein, carb và chất béo, tạo gợi ý theo CSV và chuyển sang Ăn uống để theo dõi.
 
