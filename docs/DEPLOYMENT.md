@@ -1,6 +1,6 @@
 # Chạy demo và cấu hình triển khai HBTNFIT
 
-Các lệnh trong tài liệu chạy từ **gốc repo**. Xem [README](../README.md) để bắt đầu và [DEMO.md](DEMO.md) để chọn kịch bản trình bày.
+Các lệnh trong tài liệu chạy từ **gốc repo**. Xem [README](../README.md) để bắt đầu.
 
 ## 1. Chuẩn bị
 
