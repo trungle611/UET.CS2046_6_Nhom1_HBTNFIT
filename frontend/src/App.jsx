@@ -392,7 +392,8 @@ function SignedInApp({ user, logout, loggingOut }) {
             </>
           )}
           <footer className="app-footer">
-            Dinh dưỡng là số liệu ước tính. Hãy kiểm tra món và khẩu phần trước khi xác nhận.
+            Thông tin dinh dưỡng và bài tập chỉ mang tính tham khảo. Dữ liệu món demo chưa được kiểm
+            chứng.
           </footer>
         </main>
       </div>

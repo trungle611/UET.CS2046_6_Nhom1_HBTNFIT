@@ -62,16 +62,16 @@ Khi chạy local, nếu `AUTH_SECRET` để trống, ứng dụng tự sinh khó
 
 1. Vào **Cá nhân**, nhập tuổi, chiều cao, cân nặng hiện tại/mong muốn, ngày hoàn thành, thông số sinh học và mức vận động. Chọn tăng/giảm/duy trì khớp hai mức cân nặng.
 2. **Tính thử** hiển thị kcal, protein, carb, chất béo và số ngày còn lại, không lưu vào hồ sơ. Đổi dữ liệu nhập sẽ ẩn kết quả cũ để tránh đọc nhầm.
-3. **Lưu mục tiêu** áp dụng bốn chỉ số vào theo dõi hằng ngày. **Lưu và xem ăn uống** lưu rồi chuyển thẳng tới thực đơn; có thể quay lại bằng **Sửa mục tiêu**.
+3. **Lưu và tính mục tiêu** áp dụng bốn chỉ số vào theo dõi hằng ngày. **Lưu và xem ăn uống** lưu rồi chuyển thẳng tới thực đơn; có thể quay lại bằng **Sửa mục tiêu**.
 4. Protein theo cân nặng hiện tại và mức 1,2/1,6 g/kg đã chọn, không tính theo số kg muốn tăng. Kcal được điều chỉnh theo thời hạn và giới hạn trong công thức; xem cảnh báo thời hạn. Đây là số liệu ước tính để theo dõi, không bảo đảm kết quả cân nặng.
-5. **Lưu và nhận gợi ý AI** lưu hồ sơ trước rồi tạo hai phương án đủ sáng/trưa/tối từ CSV, loại thành phần cần tránh. Khẩu phần được điều chỉnh để gần kcal mục tiêu; tổng dinh dưỡng thực đơn được hiển thị để người dùng kiểm tra. Lỗi AI không xóa mục tiêu đã lưu.
+5. **AI gợi ý ăn uống & tập luyện** lưu hồ sơ trước rồi tạo hai phương án đủ sáng/trưa/tối từ CSV, loại thành phần cần tránh. Khẩu phần được điều chỉnh để gần kcal mục tiêu; tổng dinh dưỡng thực đơn được hiển thị để người dùng kiểm tra. Lỗi AI không xóa mục tiêu đã lưu.
 6. Chọn cách ăn để chuyển sang checklist theo bữa, nhập lượng ăn rồi tick khi đã ăn. Món mới được cộng sau tick/xác nhận. Chọn giáo án để chuyển sang Tập luyện. Đổi thông tin mục tiêu làm hết hiệu lực gợi ý cũ.
 
 ## Tập luyện
 
 1. Vào **Tập luyện**, chọn một trong bốn giáo án: PPL hoặc Upper/Lower, theo nhóm tăng cơ hoặc giảm cân.
 2. Mở **Xem bài tập từng buổi** để xem tên bài cụ thể, nhóm cơ, số hiệp và số lần. Buổi tập hiển thị thêm hướng dẫn động tác và thời gian nghỉ.
-3. Chọn **Có đi tập** hoặc **Nghỉ hôm nay**. Lịch tháng hiển thị xanh cho ngày đi tập/hoàn thành, đỏ cho ngày đã chọn nghỉ; ngày chưa ghi nhận giữ màu xám.
+3. Chọn **Có đi tập** hoặc **Bỏ lỡ hôm nay**. Lịch tháng hiển thị xanh cho ngày đi tập/hoàn thành, đỏ cho ngày đã chọn bỏ lỡ; ngày chưa ghi nhận giữ màu xám.
 4. Bắt đầu từng bài rồi đánh dấu hoàn thành. Chỉ sau khi hoàn thành tất cả bài, lần đi tập sau mới chuyển sang buổi kế tiếp. Ngày nghỉ không đẩy lịch sang buổi mới.
 5. Trạng thái bài đã làm được giữ khi tiếp tục cùng buổi qua ngày khác. Chu kỳ mới không dùng lại trạng thái của chu kỳ trước. Bản này cho hoàn thành tối đa một buổi mỗi giáo án trong một ngày.
 6. Đổi giáo án không xóa lịch đi tập. Lịch tháng tổng hợp tất cả giáo án của cùng tài khoản; tiến độ từng giáo án được giữ riêng.
@@ -83,7 +83,15 @@ Khi chạy local, nếu `AUTH_SECRET` để trống, ứng dụng tự sinh khó
 3. Sửa lượng ăn. Tô, quả, đĩa và các đơn vị đếm cần số nguyên; g và ml có thể nhập số thập phân. Dinh dưỡng xem trước cập nhật theo lượng ăn.
 4. Nhấn **Xác nhận thêm**. Chỉ lúc này món mới được cộng vào thực đơn. Mã xác nhận ngăn gửi lại cùng yêu cầu làm trùng món.
 5. Sửa hoặc xóa món trong thực đơn. Lịch sử ăn theo ngày và tổng dinh dưỡng cập nhật theo dữ liệu đã lưu.
-6. Lịch sử ảnh chỉ hiện bản ghi đã xác nhận, có nút **Xem ảnh**. Thời gian hiển thị theo múi giờ Việt Nam.
+6. Lịch sử ảnh chỉ hiện bản ghi đã xác nhận, có nút **Xem ảnh**. Tên chính là tên món đã xác nhận; gợi ý AI ban đầu được giữ riêng. Bản ghi cũ được đối chiếu nhật ký liên kết khi còn dữ liệu. Thời gian hiển thị theo múi giờ Việt Nam.
+
+Món ngoài danh mục: nhập rõ tên, bấm **AI ước tính dinh dưỡng / 100 g**, kiểm tra bốn số và sửa nếu cần. Số liệu khẩu phần = số liệu cho 100 g × gram / 100. Nếu tên hoặc alias đã có trong danh mục, dùng số liệu và đơn vị sẵn có, không gọi AI. Ước tính không tự thêm món; lỗi AI vẫn cho nhập tay.
+
+## API và công cụ dữ liệu
+
+API thực đơn 7 ngày: `POST /api/meal-plans/generate` với `week_start`, `target_kcal`, `avoid_tags`, sau đó `GET /api/meal-plans/{id}`. Mỗi yêu cầu cần đăng nhập và thực đơn thuộc đúng tài khoản. Nếu AI không dùng được, API có thể dùng quy tắc dự phòng và ghi rõ `generation_mode`; đây là API riêng, chưa có màn hình thực đơn 7 ngày.
+
+Nhập CSV theo chuẩn 100 g: `python -m backend.app.import_foods DUONG_DAN_CSV` từ gốc repo. CSV cần đúng cột và nguồn dữ liệu; giá trị không hợp lệ/không hữu hạn bị từ chối, không ghi một phần. Dữ liệu tổng hợp phục vụ thử giao diện có thể tạo bằng `python -m backend.app.seed_demo`; dữ liệu có sẵn trong CSV được ưu tiên. Không dùng nhãn kiểm chứng khi chưa kiểm tra nguồn.
 
 Gợi ý và số liệu dinh dưỡng cần được người dùng kiểm tra. Các kiểm thử gọi AI bằng giả lập xác nhận luồng xử lý, không đánh giá độ chính xác của Gemini trên ảnh thật.
 
