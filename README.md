@@ -55,4 +55,4 @@ Môi trường `.local/venv` dùng Python tại `.local/venv/Scripts/python.exe`
 
 `backend/` và `frontend/` chứa mã ứng dụng; `data/` chứa CSV, `evaluation/` chứa nhãn mẫu và hướng dẫn đánh giá, `scripts/` chứa công cụ kiểm tra. Cấu hình pytest/Ruff giữ ở gốc để các lệnh kiểm tra hoạt động như cũ.
 
-Không đưa `.env`, database, ảnh người dùng hoặc môi trường Python lên Git. `.idea/` là cấu hình IDE riêng từng máy và được Git bỏ qua.
+Không đưa `.env`, database, ảnh người dùng hoặc môi trường Python lên Git. Cấu hình `.idea/` được giữ trong repo theo lựa chọn của nhóm; mỗi máy chọn Python interpreter phù hợp với môi trường đang dùng.
