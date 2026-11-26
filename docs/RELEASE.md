@@ -43,7 +43,7 @@ Mốc hiện tại kỳ vọng có 132 test backend đạt. Nếu thêm test s�
 - Chưa có minh chứng đánh giá cuối trên tập ảnh thực tế đã được hai người duyệt độc lập và tách dev/test. Đây là phần dữ liệu/nghiệm thu còn phải bổ sung, không được ghi hoàn tất chỉ dựa vào 132 test hoặc hai ảnh demo.
 - Dinh dưỡng CSV và ước tính từ ảnh còn giới hạn về nguồn/độ chính xác; người dùng cần kiểm tra trước khi xác nhận.
 - Cần cấu hình Gemini, quota, domain và nơi lưu dữ liệu bền cho môi trường sử dụng thật. Cấu hình deploy đã chuẩn bị; RC không xác nhận đã triển khai production.
-- Cấu hình `.idea/` là riêng từng máy. Sau khi cập nhật bản dọn tài liệu, chọn lại Python interpreter đang dùng nếu IDE mất cấu hình; không thay đổi hoặc xóa database để chữa lỗi IDE.
+- Các file `.idea/` được giữ trong repo theo lựa chọn của nhóm. Mỗi máy chọn Python interpreter đang dùng nếu IDE báo SDK không hợp lệ; không thay đổi hoặc xóa database để chữa lỗi IDE.
 
 ## Quy tắc từ ngày 26 tháng 11
 

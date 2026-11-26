@@ -9,11 +9,11 @@ Các lệnh trong tài liệu chạy từ **gốc repo**. Xem [README](../README
 - Luôn mở terminal tại thư mục gốc có `backend/` và `frontend/`. Không chạy lệnh cài backend trong `frontend/`.
 - Giữ nguyên `.env` và database đang dùng. Chỉ sao chép `.env.example` khi chưa có `.env`.
 
-### Cập nhật từ bản còn theo dõi `.idea`
+### Cấu hình IDE khi cập nhật
 
 Tài liệu triển khai/RC được gom vào `docs/`; `scripts/check_release.py`, backend, frontend và đường dẫn dữ liệu giữ nguyên. Các link tài liệu của tag RC1 vẫn trỏ đến cấu trúc cũ tại đúng tag đó.
 
-`.idea/` được bỏ khỏi Git để mỗi máy tự chọn SDK/interpreter. Trước khi pull bản thay đổi này, nếu muốn giữ cấu hình IDE hiện tại thì sao chép `.idea/` ra thư mục riêng ngoài repo. Git có thể gỡ các file từng được theo dõi khi cập nhật commit. Sau đó mở lại dự án và chọn Python có sẵn trong `.venv` hoặc `.local/venv` của chính máy đó. Nếu cần, khôi phục bản sao cấu hình IDE riêng; Git sẽ bỏ qua nó. Không cần tạo lại môi trường đang chạy tốt, xóa database hoặc chép môi trường Python của máy khác.
+Toàn bộ các file `.idea/` đã được theo dõi trước đợt dọn tài liệu được giữ lại trong Git theo lựa chọn của nhóm. Mỗi máy vẫn dùng Python interpreter có sẵn trong `.venv` hoặc `.local/venv` của chính máy đó. Nếu IDE báo SDK không hợp lệ, chọn lại interpreter đang hoạt động trên máy; không cần tạo lại môi trường đang chạy tốt, xóa database hoặc chép môi trường Python của máy khác.
 
 ## 2. Windows PowerShell
 
